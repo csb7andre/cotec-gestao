@@ -28,7 +28,7 @@ body {
 .brand-text h1 { margin: 0; font-size: 1.2rem; }
 .brand-text span { font-size: 0.6rem; opacity: 0.8; display: block; }
 
-/* Atalhos no Cabeçalho */
+/* Atalhos */
 .nav-shortcuts { display: flex; align-items: center; gap: 15px; }
 .nav-shortcuts a { color: #ccc; text-decoration: none; font-size: 0.8rem; transition: color 0.2s; }
 .nav-shortcuts a:hover { color: white; text-decoration: underline; }
@@ -38,7 +38,7 @@ body {
 .toggle-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
 .toggle-header:hover { background: #f1f5f9; }
 
-/* Botão Sincronizar Discreto */
+/* Botão Sincronizar */
 .btn-sm-sync {
     background: transparent; border: 1px solid var(--border);
     color: var(--text); font-size: 0.7rem; padding: 4px 8px;
@@ -64,7 +64,7 @@ body {
 .item-list li { 
     display: flex; justify-content: space-between; padding: 8px; 
     border-bottom: 1px solid var(--border); font-size: 0.9rem; align-items: center; 
-    cursor: grab; /* Indica que pode arrastar */
+    cursor: grab; 
 }
 .item-list li.dragging { opacity: 0.5; background: #e2e8f0; border: 2px dashed #94a3b8; }
 
@@ -85,15 +85,28 @@ body {
 .painel-tarefas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
 .painel { background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
 
-/* Botões Gerais */
+/* Botões */
 button { cursor: pointer; border-radius: 6px; font-weight: 600; border: none; transition: filter 0.2s; }
 button:hover { filter: brightness(0.95); }
 .btn-accent { background: var(--accent); color: white; padding: 8px 16px; }
 .btn-mega { width: 100%; padding: 15px; font-size: 1rem; background: #059669; color: white; border-radius: 8px; }
 .btn-secundario { background: #6366f1; }
 .btn-reset { background: #f1f5f9; color: #64748b; font-size: 0.8rem; padding: 6px 12px; border: 1px solid #cbd5e1; }
-.btn-exp { background: transparent; border: 1px solid #cbd5e1; color: #64748b; padding: 4px 8px; font-size: 1.1rem; }
+
+/* ESTILO DOS BOTÕES DE EXPORTAÇÃO COM IMAGEM */
+.btn-exp { 
+    background: transparent; 
+    border: 1px solid #cbd5e1; 
+    color: #64748b; 
+    padding: 4px 8px; 
+    font-size: 0.9rem; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 5px; 
+    justify-content: center;
+}
 .btn-exp:hover { color: var(--accent); border-color: var(--accent); }
+.icon-export { width: 18px; height: 18px; object-fit: contain; vertical-align: middle; }
 
 /* Cards Específicos */
 .demand-card { 

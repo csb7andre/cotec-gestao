@@ -21,9 +21,7 @@ let projetoAtualIndex = null;
 let demandasMinimizadas = false;
 let reunioesMinimizadas = false;
 let projetosMinimizados = false;
-let mainSectionMinimized = true; // Começa minimizado
-
-// Drag & Drop Control
+let mainSectionMinimized = true; 
 let draggedItemIndex = null;
 
 // --- SINCRONIZAÇÃO ---
@@ -37,7 +35,6 @@ async function salvarNoServidor(tipo, dados) {
 }
 
 function salvarTudo() {
-    // Local
     localStorage.setItem("membros", JSON.stringify(membros));
     localStorage.setItem("tarefas", JSON.stringify(tarefas));
     localStorage.setItem("config", JSON.stringify(config));
@@ -46,7 +43,6 @@ function salvarTudo() {
     localStorage.setItem("projetos", JSON.stringify(projetos));
     localStorage.setItem("historico", JSON.stringify(historico));
 
-    // Nuvem
     salvarNoServidor("membros", membros);
     salvarNoServidor("tarefas", tarefas);
     salvarNoServidor("config", config);
@@ -62,14 +58,11 @@ async function carregarDadosDoServidor() {
         const r = await fetch(API_URL);
         const d = await r.json();
         if (d) {
-            // Vacina para duplicatas e vazios
             membros = [...new Set((d.membros || membros).filter(x => x && x.trim() !== ""))];
             tarefas = [...new Set((d.tarefas || tarefas).filter(x => x && x.trim() !== ""))];
-            
             demandas = (d.demandas || demandas).filter(x => x && x.id);
             reunioes = (d.reunioes || reunioes).filter(x => x && x.id);
             projetos = (d.projetos || projetos).filter(x => x && x.id);
-            
             config = d.config || config;
             historico = d.escalas || historico;
             init();
@@ -89,12 +82,11 @@ function init() {
     renderReunioes();
     renderProjetos();
     
-    // Configura estado inicial da seção principal
     const mainContent = document.getElementById("mainSectionContent");
     const setaMain = document.getElementById("setaMainSection");
     if(mainSectionMinimized) {
         mainContent.style.display = "none";
-        setaMain.innerText = "▼"; // Indica que pode abrir
+        setaMain.innerText = "▼";
     } else {
         mainContent.style.display = "block";
         setaMain.innerText = "▲";
@@ -139,26 +131,22 @@ function removerMembro(i) { membros.splice(i,1); renderListas(); salvarTudo(); }
 function removerTarefa(i) { tarefas.splice(i,1); renderListas(); salvarTudo(); }
 
 function renderListas() {
-    // Renderiza Membros com Drag & Drop
     const listaMembros = document.getElementById("listaMembros");
     listaMembros.innerHTML = "";
     membros.forEach((m, i) => {
         const li = document.createElement("li");
         li.draggable = true;
         li.innerHTML = `<span>${m}</span> <button onclick="removerMembro(${i})" title="Excluir membro">x</button>`;
-        
-        // Eventos Drag & Drop
         li.ondragstart = (e) => { draggedItemIndex = i; li.classList.add("dragging"); };
         li.ondragend = (e) => { li.classList.remove("dragging"); draggedItemIndex = null; };
         li.ondragover = (e) => { e.preventDefault(); };
         li.ondrop = (e) => {
             e.preventDefault();
             if (draggedItemIndex === null || draggedItemIndex === i) return;
-            // Troca de posição
             const itemMovido = membros.splice(draggedItemIndex, 1)[0];
             membros.splice(i, 0, itemMovido);
             renderListas();
-            salvarTudo(); // Salva a nova ordem
+            salvarTudo(); 
         };
         listaMembros.appendChild(li);
     });
@@ -224,10 +212,7 @@ function gerarEscala(periodo) {
     ativas.forEach(t => { config[t].responsaveis.forEach(r => { if(!dist[r.pessoa]) dist[r.pessoa]=[]; dist[r.pessoa].push(r.obs ? `${t} (${r.obs})` : t); }); });
     historico.unshift({ data: label, distribuicao: dist });
     document.getElementById("tituloEscalaGerada").innerText = "ESCALA: " + label;
-    
-    // Atualiza opções de exportação
     renderOpcoesExportacao();
-    
     document.getElementById("resultado").innerHTML = Object.entries(dist).map(([p, tasks]) => `<div style="padding:8px; border-bottom:1px solid #eee;"><b>${p}</b>: ${tasks.join(" | ")}</div>`).join("");
     document.getElementById("resultSection").classList.remove("hidden");
     salvarTudo();
@@ -237,7 +222,6 @@ function gerarEscala(periodo) {
 function renderOpcoesExportacao() {
     const sel = document.getElementById("exportIndividualSelect");
     sel.innerHTML = "";
-    // Pega todos os nomes que estão na escala atual
     const nomes = Object.keys(historico[0].distribuicao);
     nomes.forEach(n => {
         const op = document.createElement("option");
@@ -293,10 +277,7 @@ function renderDemandas() {
     const seta=document.getElementById("setaDemandas"), cont=document.getElementById("contadorDemandas");
     const vis = demandas.filter(d=>!d.concluida).length;
     cont.innerText = demandasMinimizadas ? ` (${vis})` : ""; seta.innerText = demandasMinimizadas?"▶":"▼";
-    
-    // Esconde ou mostra o rodapé de ações em lote
     if(footer) footer.style.display = demandasMinimizadas ? "none" : "flex";
-
     if(demandasMinimizadas){ c.innerHTML=""; return; }
     
     c.innerHTML = demandas.filter(d=>!d.concluida).map((d,i) => {
@@ -337,9 +318,9 @@ function renderDemandas() {
                     <div style="font-size:0.75rem; color:#888">📅 ${d.dataIni||'-'} a ${d.dataFim||'-'} | 👤 ${d.responsaveis.map(r=>r.pessoa).join(", ")}</div>
                 </div>
                 <div style="display:flex; gap:5px; align-items:center;">
-                    <button class="btn-exp" title="Imprimir" onclick="exportarUnicaDemanda(${idx},'print')">🖨️</button>
-                    <button class="btn-exp" title="Word" onclick="exportarUnicaDemanda(${idx},'word')">📄</button>
-                    <button class="btn-exp" title="WhatsApp" onclick="exportarUnicaDemanda(${idx},'whats')">📲</button>
+                    <button class="btn-exp" title="Imprimir" onclick="exportarUnicaDemanda(${idx},'print')"><img src="impressora.png" class="icon-export"></button>
+                    <button class="btn-exp" title="Word" onclick="exportarUnicaDemanda(${idx},'word')"><img src="word.png" class="icon-export"></button>
+                    <button class="btn-exp" title="WhatsApp" onclick="exportarUnicaDemanda(${idx},'whats')"><img src="whatsapp.png" class="icon-export"></button>
                     <button class="btn-reset" onclick="alternarDemanda(${idx})" title="Editar">✏️</button>
                     <button class="btn-reset" onclick="marcarDemandaConcluida(${idx})" title="Concluir">✅</button>
                     <button class="btn-reset" style="color:red" onclick="removerDemanda(${idx})" title="Excluir">🗑️</button>
@@ -347,7 +328,6 @@ function renderDemandas() {
             </div>`;
         }
     }).join("");
-    // Init Quills if needed (timeout)
     demandas.forEach(d => { if(d.editando) setTimeout(() => { const q = new Quill(`#edit_notas_${d.id}`, {theme:'snow'}); q.root.innerHTML=d.notas||''; q.on('text-change',()=>d.notas=q.root.innerHTML); }, 10); });
 }
 
@@ -437,9 +417,9 @@ function renderReunioes() {
             <div class="demand-card" style="display:flex; justify-content:space-between; align-items:center">
                 <div><b>${r.titulo||'Reunião'}</b><br><small>${r.data}</small></div>
                 <div style="display:flex; gap:5px">
-                    <button class="btn-exp" onclick="exportarReuniao(${i},'print')" title="Imprimir">🖨️</button>
-                    <button class="btn-exp" onclick="exportarReuniao(${i},'word')" title="Word">📄</button>
-                    <button class="btn-exp" onclick="exportarReuniao(${i},'whats')" title="WhatsApp">📲</button>
+                    <button class="btn-exp" onclick="exportarReuniao(${i},'print')" title="Imprimir"><img src="impressora.png" class="icon-export"></button>
+                    <button class="btn-exp" onclick="exportarReuniao(${i},'word')" title="Word"><img src="word.png" class="icon-export"></button>
+                    <button class="btn-exp" onclick="exportarReuniao(${i},'whats')" title="WhatsApp"><img src="whatsapp.png" class="icon-export"></button>
                     <button class="btn-reset" onclick="alternarReuniao(${i})" title="Editar">✏️</button>
                     <button class="btn-reset" style="color:red" onclick="excluirReuniao(${i})" title="Excluir">🗑️</button>
                 </div>
@@ -503,9 +483,9 @@ function renderProjetos() {
     c.innerHTML = projetos.map((p, i) => `
         <div class="demand-card">
             <div style="display:flex; justify-content:flex-end; gap:5px; margin-bottom:5px">
-                 <button class="btn-exp" onclick="exportarProjeto(${i},'print')" title="Imprimir">🖨️</button>
-                 <button class="btn-exp" onclick="exportarProjeto(${i},'word')" title="Word">📄</button>
-                 <button class="btn-exp" onclick="exportarProjeto(${i},'whats')" title="WhatsApp">📲</button>
+                 <button class="btn-exp" onclick="exportarProjeto(${i},'print')" title="Imprimir"><img src="impressora.png" class="icon-export"></button>
+                 <button class="btn-exp" onclick="exportarProjeto(${i},'word')" title="Word"><img src="word.png" class="icon-export"></button>
+                 <button class="btn-exp" onclick="exportarProjeto(${i},'whats')" title="WhatsApp"><img src="whatsapp.png" class="icon-export"></button>
             </div>
             <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px">
                 <input placeholder="Título do Projeto" value="${p.titulo}" onchange="projetos[${i}].titulo=this.value; salvarTudo()" style="flex:1; font-weight:bold" title="Título">
