@@ -1,7 +1,7 @@
 {
-  "name": "COTEC – Gestão Policial",
+  "name": "COTEC - Gestão Policial",
   "short_name": "COTEC",
-  "start_url": "./index.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
@@ -17,15 +17,4 @@
       "type": "image/png"
     }
   ]
-}
-
-
-{
-  "name": "Escala Rotativa",
-  "short_name": "Escala",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "icons": []
 }

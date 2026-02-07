@@ -51,16 +51,31 @@ let historico = JSON.parse(localStorage.getItem("historico")) || [];
 let tarefaEmConfiguracao = null;
 let demandaSendoSorteada = null;
 
-function salvarTudo() {
+async function salvarTudo() {
+    // 1. Salva no navegador atual (backup rápido)
     localStorage.setItem("membros", JSON.stringify(membros));
     localStorage.setItem("tarefas", JSON.stringify(tarefas));
     localStorage.setItem("config", JSON.stringify(config));
     localStorage.setItem("demandas", JSON.stringify(demandas));
     localStorage.setItem("historico", JSON.stringify(historico));
     localStorage.setItem("reunioes", JSON.stringify(reunioes));
-localStorage.setItem("projetos", JSON.stringify(projetos));
+    localStorage.setItem("projetos", JSON.stringify(projetos));
 
+    // 2. Envia para a Planilha do Google (para todos os PCs verem)
+    const dadosCompletos = {
+        membros, tarefas, config, demandas, historico, reunioes, projetos
+    };
 
+    try {
+        await fetch(API_URL, {
+            method: "POST",
+            mode: "no-cors", // Necessário para evitar erro de CORS do Google
+            body: JSON.stringify(dadosCompletos)
+        });
+        console.log("Sincronizado com a nuvem!");
+    } catch (e) {
+        console.error("Erro ao sincronizar:", e);
+    }
 }
 
 function init() {
