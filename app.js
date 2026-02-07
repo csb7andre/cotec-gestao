@@ -21,6 +21,10 @@ let projetoAtualIndex = null;
 let demandasMinimizadas = false;
 let reunioesMinimizadas = false;
 let projetosMinimizados = false;
+let mainSectionMinimized = true; // Começa minimizado
+
+// Drag & Drop Control
+let draggedItemIndex = null;
 
 // --- SINCRONIZAÇÃO ---
 async function salvarNoServidor(tipo, dados) {
@@ -53,42 +57,29 @@ function salvarTudo() {
 }
 
 async function carregarDadosDoServidor() {
-    // Feedback visual nos botões
     document.querySelectorAll('.btn-sm-sync').forEach(b => b.innerText = "⏳");
-
     try {
         const r = await fetch(API_URL);
         const d = await r.json();
-
-       if (d) {
-            // 1. LIMPEZA TOTAL (Vacina)
-            // [...new Set(...)] -> Remove nomes repetidos
-            // .filter(...) -> Remove nomes vazios
+        if (d) {
+            // Vacina para duplicatas e vazios
             membros = [...new Set((d.membros || membros).filter(x => x && x.trim() !== ""))];
             tarefas = [...new Set((d.tarefas || tarefas).filter(x => x && x.trim() !== ""))];
             
-            // 2. OBJETOS (Garante que tenham ID)
             demandas = (d.demandas || demandas).filter(x => x && x.id);
             reunioes = (d.reunioes || reunioes).filter(x => x && x.id);
             projetos = (d.projetos || projetos).filter(x => x && x.id);
             
             config = d.config || config;
             historico = d.escalas || historico;
-
-            console.log("Dados limpos (sem vazios/repetidos) e sincronizados.");
-            
-            // Atualiza o LocalStorage para garantir que o PC fique limpo também
-            localStorage.setItem("membros", JSON.stringify(membros));
-            localStorage.setItem("tarefas", JSON.stringify(tarefas));
-            
             init();
         }
-    } catch (e) {
-        console.warn("Erro sync", e);
-    } finally {
+    } catch (e) { console.warn("Erro sync", e); }
+    finally {
         document.querySelectorAll('.btn-sm-sync').forEach(b => b.innerText = "🔄");
     }
 }
+
 // --- INIT ---
 function init() {
     tarefas.forEach(t => { if (!config[t]) config[t] = { responsaveis: [] }; });
@@ -97,61 +88,84 @@ function init() {
     renderDemandas();
     renderReunioes();
     renderProjetos();
+    
+    // Configura estado inicial da seção principal
+    const mainContent = document.getElementById("mainSectionContent");
+    const setaMain = document.getElementById("setaMainSection");
+    if(mainSectionMinimized) {
+        mainContent.style.display = "none";
+        setaMain.innerText = "▼"; // Indica que pode abrir
+    } else {
+        mainContent.style.display = "block";
+        setaMain.innerText = "▲";
+    }
 }
 
 // --- CABEÇALHO ---
 const CABECALHO_SEM_IMAGEM = (periodo) => `
     <div style="text-align: center; font-family: Arial; margin-bottom: 30px;">
-        <h2 style="margin: 5px 0; font-size: 16pt;">COTEC - GESTÃO DE TECNOLOGIAS POLICIAIS</h2>
-        <h3 style="margin: 0; font-size: 14pt;">DEPARTAMENTO DE POLÍCIA LEGISLATIVA</h3>
-        <hr><h4 style="margin: 10px 0;"> : ${periodo}</h4>
+        <h2 style="margin: 5px 0; font-size: 16pt;">GESTÃO COTEC</h2>
+        <h3 style="margin: 0; font-size: 14pt;">COORDENAÇÃO DE GESTÃO DE TECNOLOGIAS POLICIAIS E CREDENCIAMENTO</h3>
+        <hr><h4 style="margin: 10px 0;">RELATÓRIO: ${periodo}</h4>
     </div>
 `;
 
-// --- LISTAS ---
-function addMembro() {
-    // .trim() remove espaços antes e depois. " André " vira "André"
-    const v = document.getElementById("novoMembro").value.trim();
-    
-    if (!v) return; // Se vazio, tchau.
-    
-    // O PORTEIRO: Se a lista já inclui esse nome, avisa e para tudo.
-    if (membros.includes(v)) {
-        alert("Este membro já existe na lista!");
-        document.getElementById("novoMembro").value = ""; // Limpa o campo para não confundir
-        return; 
+// --- CONTROLE SEÇÃO PRINCIPAL ---
+function toggleMainSection() {
+    mainSectionMinimized = !mainSectionMinimized;
+    const mainContent = document.getElementById("mainSectionContent");
+    const setaMain = document.getElementById("setaMainSection");
+    if(mainSectionMinimized) {
+        mainContent.style.display = "none";
+        setaMain.innerText = "▼";
+    } else {
+        mainContent.style.display = "block";
+        setaMain.innerText = "▲";
     }
-
-    membros.push(v);
-    document.getElementById("novoMembro").value = "";
-    renderListas();
-    salvarTudo();
 }
 
-function addTarefa() {
-    const v = document.getElementById("novaTarefa").value.trim();
-    
-    if (!v) return;
-    
-    if (tarefas.includes(v)) {
-        alert("Esta tarefa já existe!");
-        document.getElementById("novaTarefa").value = "";
-        return;
-    }
-
-    tarefas.push(v);
-    document.getElementById("novaTarefa").value = "";
-    init();
-    salvarTudo();
+// --- LISTAS E DRAG & DROP ---
+function addMembro() { 
+    const v=document.getElementById("novoMembro").value.trim(); 
+    if(!v)return; if(membros.includes(v))return alert("Já existe!");
+    membros.push(v); document.getElementById("novoMembro").value=""; renderListas(); salvarTudo();
+}
+function addTarefa() { 
+    const v=document.getElementById("novaTarefa").value.trim(); 
+    if(!v)return; if(tarefas.includes(v))return alert("Já existe!");
+    tarefas.push(v); document.getElementById("novaTarefa").value=""; init(); salvarTudo();
 }
 function removerMembro(i) { membros.splice(i,1); renderListas(); salvarTudo(); }
 function removerTarefa(i) { tarefas.splice(i,1); renderListas(); salvarTudo(); }
 
 function renderListas() {
-    document.getElementById("listaMembros").innerHTML = membros.map((m,i)=>`<li>${m} <button onclick="removerMembro(${i})">x</button></li>`).join("");
-    document.getElementById("listaTarefas").innerHTML = tarefas.map((t,i)=>`<li>${t} <button onclick="removerTarefa(${i})">x</button></li>`).join("");
-    document.getElementById("presentes").innerHTML = membros.map(m=>`<div class="presente-toggle" onclick="toggleAtivo(this)">${m}</div>`).join("");
-    document.getElementById("tarefasHoje").innerHTML = tarefas.map(t=>`<div class="presente-toggle" onclick="toggleAtivo(this)">${t}</div>`).join("");
+    // Renderiza Membros com Drag & Drop
+    const listaMembros = document.getElementById("listaMembros");
+    listaMembros.innerHTML = "";
+    membros.forEach((m, i) => {
+        const li = document.createElement("li");
+        li.draggable = true;
+        li.innerHTML = `<span>${m}</span> <button onclick="removerMembro(${i})" title="Excluir membro">x</button>`;
+        
+        // Eventos Drag & Drop
+        li.ondragstart = (e) => { draggedItemIndex = i; li.classList.add("dragging"); };
+        li.ondragend = (e) => { li.classList.remove("dragging"); draggedItemIndex = null; };
+        li.ondragover = (e) => { e.preventDefault(); };
+        li.ondrop = (e) => {
+            e.preventDefault();
+            if (draggedItemIndex === null || draggedItemIndex === i) return;
+            // Troca de posição
+            const itemMovido = membros.splice(draggedItemIndex, 1)[0];
+            membros.splice(i, 0, itemMovido);
+            renderListas();
+            salvarTudo(); // Salva a nova ordem
+        };
+        listaMembros.appendChild(li);
+    });
+
+    document.getElementById("listaTarefas").innerHTML = tarefas.map((t,i)=>`<li>${t} <button onclick="removerTarefa(${i})" title="Excluir tarefa">x</button></li>`).join("");
+    document.getElementById("presentes").innerHTML = membros.map(m=>`<div class="presente-toggle" onclick="toggleAtivo(this)" title="Marcar presença">${m}</div>`).join("");
+    document.getElementById("tarefasHoje").innerHTML = tarefas.map(t=>`<div class="presente-toggle" onclick="toggleAtivo(this)" title="Incluir na escala">${t}</div>`).join("");
 }
 function toggleAtivo(el) { el.classList.toggle('ativo'); renderPainel(); }
 
@@ -169,23 +183,23 @@ function renderPainel() {
             <div style="background:#fff; padding:5px; margin-bottom:5px; border:1px solid #ddd; border-radius:4px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem;">
                     <span>${r.sorteado?'🎲':''} <b>${r.pessoa}</b></span>
-                    <button onclick="removerResp('${t}',${i})" style="color:red; background:none; border:none; cursor:pointer">✖</button>
+                    <button onclick="removerResp('${t}',${i})" style="color:red; background:none; border:none; cursor:pointer" title="Remover agente">✖</button>
                 </div>
-                <input type="text" placeholder="Obs/VTR..." value="${r.obs || ''}" onchange="atualizarObsTarefa('${t}', ${i}, this.value)" style="font-size:0.65rem; padding:3px; border:1px solid #eee; margin-top:3px; width:100%">
+                <input type="text" placeholder="Obs/VTR..." value="${r.obs || ''}" onchange="atualizarObsTarefa('${t}', ${i}, this.value)" style="font-size:0.65rem; padding:3px; border:1px solid #eee; margin-top:3px; width:100%" title="Viatura, Posto ou Observação">
             </div>`).join("");
 
         return `<div class="painel">
             <b style="font-size:0.8rem">${t.toUpperCase()}</b>
             <div style="margin-top:5px;">${respsHtml}</div>
-            <select onchange="adicionarResp('${t}', this.value)" style="width:100%; margin-top:5px; font-size:0.7rem">
+            <select onchange="adicionarResp('${t}', this.value)" style="width:100%; margin-top:5px; font-size:0.7rem" title="Adicionar agente manualmente">
                 <option value="">+ Agente</option>
                 ${presentes.filter(p=>!ocupados.includes(p)).map(p=>`<option value="${p}">${p}</option>`).join("")}
             </select>
-            <button class="btn-reset" style="width:100%; margin-top:3px" onclick="abrirModalSorteio('${t}')">Sortear</button>
+            <button class="btn-reset" style="width:100%; margin-top:3px" onclick="abrirModalSorteio('${t}')" title="Sortear agente aleatório">Sortear</button>
         </div>`;
     }).join("");
 }
-function atualizarObsTarefa(t, i, v) { config[t].responsaveis[i].obs = v; } // Salva só ao gerar escala para não travar
+function atualizarObsTarefa(t, i, v) { config[t].responsaveis[i].obs = v; } 
 function adicionarResp(t, p) { if(p) { config[t].responsaveis.push({pessoa: p, tipo: 'P', sorteado: false, obs: ''}); renderPainel(); }}
 function removerResp(t, i) { config[t].responsaveis.splice(i, 1); renderPainel(); }
 function resetarPainelEscala() { tarefas.forEach(t => config[t].responsaveis = []); renderPainel(); }
@@ -210,18 +224,57 @@ function gerarEscala(periodo) {
     ativas.forEach(t => { config[t].responsaveis.forEach(r => { if(!dist[r.pessoa]) dist[r.pessoa]=[]; dist[r.pessoa].push(r.obs ? `${t} (${r.obs})` : t); }); });
     historico.unshift({ data: label, distribuicao: dist });
     document.getElementById("tituloEscalaGerada").innerText = "ESCALA: " + label;
+    
+    // Atualiza opções de exportação
+    renderOpcoesExportacao();
+    
     document.getElementById("resultado").innerHTML = Object.entries(dist).map(([p, tasks]) => `<div style="padding:8px; border-bottom:1px solid #eee;"><b>${p}</b>: ${tasks.join(" | ")}</div>`).join("");
     document.getElementById("resultSection").classList.remove("hidden");
     salvarTudo();
 }
+
+// --- EXPORTAÇÃO AVANÇADA ---
+function renderOpcoesExportacao() {
+    const sel = document.getElementById("exportIndividualSelect");
+    sel.innerHTML = "";
+    // Pega todos os nomes que estão na escala atual
+    const nomes = Object.keys(historico[0].distribuicao);
+    nomes.forEach(n => {
+        const op = document.createElement("option");
+        op.value = n;
+        op.innerText = n;
+        sel.appendChild(op);
+    });
+    toggleExportSelect();
+}
+
+function toggleExportSelect() {
+    const target = document.getElementById("exportTarget").value;
+    document.getElementById("exportIndividualSelect").style.display = target === 'individual' ? 'inline-block' : 'none';
+}
+
 function executarExport(formato) {
-    const h = historico[0]; if(!h) return alert("Gere a escala!");
+    const h = historico[0]; 
+    if(!h) return alert("Gere a escala primeiro!");
+    
+    const target = document.getElementById("exportTarget").value;
+    const individualName = document.getElementById("exportIndividualSelect").value;
+    
+    let dadosExport = {};
+    
+    if (target === 'individual') {
+        if (!individualName || !h.distribuicao[individualName]) return alert("Agente não encontrado na escala.");
+        dadosExport[individualName] = h.distribuicao[individualName];
+    } else {
+        dadosExport = h.distribuicao;
+    }
+
     if(formato === 'whats') {
-        let m = `*COTEC - ESCALA*\n*DATA: ${h.data}*\n\n`;
-        Object.entries(h.distribuicao).forEach(([p, t]) => m += `👤 *${p}*\n🛠 ${t.join(" | ")}\n\n`);
+        let m = `*GESTÃO COTEC - ESCALA*\n*DATA: ${h.data}*\n\n`;
+        Object.entries(dadosExport).forEach(([p, t]) => m += `👤 *${p}*\n🛠 ${t.join(" | ")}\n\n`);
         window.open(`https://wa.me/?text=${encodeURIComponent(m)}`);
     } else {
-        let html = `<html><body style="padding:40px; font-family:Arial;">${CABECALHO_SEM_IMAGEM(h.data)}<table border="1" style="width:100%;border-collapse:collapse"><tr style="background:#eee"><th style="padding:10px">Agente</th><th style="padding:10px">Atividades</th></tr>${Object.entries(h.distribuicao).map(([p, t]) => `<tr><td style="padding:10px"><b>${p}</b></td><td style="padding:10px">${t.join(" | ")}</td></tr>`).join("")}</table></body></html>`;
+        let html = `<html><body style="padding:40px; font-family:Arial;">${CABECALHO_SEM_IMAGEM(h.data)}<table border="1" style="width:100%;border-collapse:collapse"><tr style="background:#eee"><th style="padding:10px">Agente</th><th style="padding:10px">Atividades</th></tr>${Object.entries(dadosExport).map(([p, t]) => `<tr><td style="padding:10px"><b>${p}</b></td><td style="padding:10px">${t.join(" | ")}</td></tr>`).join("")}</table></body></html>`;
         if(formato==='print') { let w=window.open(""); w.document.write(html); w.document.close(); setTimeout(()=>w.print(),500); }
         else { const b=new Blob(['\ufeff',html],{type:'application/msword'}); const l=document.createElement('a'); l.href=URL.createObjectURL(b); l.download="Escala.doc"; l.click(); }
     }
@@ -236,9 +289,14 @@ function novaDemanda() {
 }
 function renderDemandas() {
     const c = document.getElementById("listaDemandas"); if(!c) return;
+    const footer = document.getElementById("footerDemandas");
     const seta=document.getElementById("setaDemandas"), cont=document.getElementById("contadorDemandas");
     const vis = demandas.filter(d=>!d.concluida).length;
     cont.innerText = demandasMinimizadas ? ` (${vis})` : ""; seta.innerText = demandasMinimizadas?"▶":"▼";
+    
+    // Esconde ou mostra o rodapé de ações em lote
+    if(footer) footer.style.display = demandasMinimizadas ? "none" : "flex";
+
     if(demandasMinimizadas){ c.innerHTML=""; return; }
     
     c.innerHTML = demandas.filter(d=>!d.concluida).map((d,i) => {
@@ -248,25 +306,25 @@ function renderDemandas() {
         if(d.editando) {
             return `
             <div class="demand-card" style="border-left:8px solid ${cor}">
-                <div style="display:flex; justify-content:flex-end"><button class="btn-reset" onclick="alternarDemanda(${idx})">➖</button></div>
+                <div style="display:flex; justify-content:flex-end"><button class="btn-reset" onclick="alternarDemanda(${idx})" title="Minimizar edição">➖</button></div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px">
-                    <input placeholder="Título" value="${d.titulo}" oninput="demandas[${idx}].titulo=this.value" style="padding:8px; border:1px solid #ddd; width:100%">
-                    <input placeholder="Subtítulo" value="${d.subtitulo}" oninput="demandas[${idx}].subtitulo=this.value" style="padding:8px; border:1px solid #ddd; width:100%">
+                    <input placeholder="Título" value="${d.titulo}" oninput="demandas[${idx}].titulo=this.value" style="padding:8px; border:1px solid #ddd; width:100%" title="Título da demanda">
+                    <input placeholder="Subtítulo" value="${d.subtitulo}" oninput="demandas[${idx}].subtitulo=this.value" style="padding:8px; border:1px solid #ddd; width:100%" title="Subtítulo">
                 </div>
-                <input placeholder="Status" value="${d.status}" oninput="demandas[${idx}].status=this.value" style="width:100%; padding:8px; border:1px solid #ddd; margin-bottom:10px">
+                <input placeholder="Status" value="${d.status}" oninput="demandas[${idx}].status=this.value" style="width:100%; padding:8px; border:1px solid #ddd; margin-bottom:10px" title="Status atual">
                 <div style="display:flex; gap:10px; margin-bottom:10px">
-                    <input type="date" value="${d.dataIni}" oninput="demandas[${idx}].dataIni=this.value">
-                    <input type="date" value="${d.dataFim}" oninput="demandas[${idx}].dataFim=this.value">
-                    <select onchange="demandas[${idx}].prioridade=this.value"><option ${d.prioridade==='Baixa'?'selected':''}>Baixa</option><option ${d.prioridade==='Normal'?'selected':''}>Normal</option><option ${d.prioridade==='Alta'?'selected':''}>Alta</option><option ${d.prioridade==='Urgente'?'selected':''}>Urgente</option></select>
+                    <input type="date" value="${d.dataIni}" oninput="demandas[${idx}].dataIni=this.value" title="Data Inicial">
+                    <input type="date" value="${d.dataFim}" oninput="demandas[${idx}].dataFim=this.value" title="Data Final">
+                    <select onchange="demandas[${idx}].prioridade=this.value" title="Prioridade"><option ${d.prioridade==='Baixa'?'selected':''}>Baixa</option><option ${d.prioridade==='Normal'?'selected':''}>Normal</option><option ${d.prioridade==='Alta'?'selected':''}>Alta</option><option ${d.prioridade==='Urgente'?'selected':''}>Urgente</option></select>
                 </div>
-                <textarea id="edit_notas_${d.id}" style="width:100%; height:100px">${d.notas||''}</textarea>
+                <textarea id="edit_notas_${d.id}" style="width:100%; height:100px" title="Notas detalhadas">${d.notas||''}</textarea>
                 <div style="background:#f1f5f9; padding:10px; margin:10px 0">
-                    <b>Equipe:</b> <button class="btn-reset" onclick="abrirSorteioDemanda(${idx})">🎲 Sortear</button>
-                    <div class="chip-container">${membros.map(m=>`<div class="presente-toggle ${d.responsaveis.find(x=>x.pessoa===m)?'ativo':''}" onclick="toggleRespDemanda(${idx},'${m}',this)">${m}</div>`).join("")}</div>
+                    <b>Equipe:</b> <button class="btn-reset" onclick="abrirSorteioDemanda(${idx})" title="Sortear agentes para esta demanda">🎲 Sortear</button>
+                    <div class="chip-container">${membros.map(m=>`<div class="presente-toggle ${d.responsaveis.find(x=>x.pessoa===m)?'ativo':''}" onclick="toggleRespDemanda(${idx},'${m}',this)" title="Adicionar/Remover agente">${m}</div>`).join("")}</div>
                 </div>
                 <div style="display:flex; gap:10px">
-                    <button class="btn-accent" onclick="gravarDemanda(${idx})">✅ GRAVAR</button>
-                    <button class="btn-reset" onclick="removerDemanda(${idx})" style="color:red">Excluir</button>
+                    <button class="btn-accent" onclick="gravarDemanda(${idx})" title="Salvar alterações">✅ GRAVAR</button>
+                    <button class="btn-reset" onclick="removerDemanda(${idx})" style="color:red" title="Excluir demanda">Excluir</button>
                 </div>
             </div>`;
         } else {
@@ -282,9 +340,9 @@ function renderDemandas() {
                     <button class="btn-exp" title="Imprimir" onclick="exportarUnicaDemanda(${idx},'print')">🖨️</button>
                     <button class="btn-exp" title="Word" onclick="exportarUnicaDemanda(${idx},'word')">📄</button>
                     <button class="btn-exp" title="WhatsApp" onclick="exportarUnicaDemanda(${idx},'whats')">📲</button>
-                    <button class="btn-reset" onclick="alternarDemanda(${idx})">✏️</button>
-                    <button class="btn-reset" onclick="marcarDemandaConcluida(${idx})">✅</button>
-                    <button class="btn-reset" style="color:red" onclick="removerDemanda(${idx})">🗑️</button>
+                    <button class="btn-reset" onclick="alternarDemanda(${idx})" title="Editar">✏️</button>
+                    <button class="btn-reset" onclick="marcarDemandaConcluida(${idx})" title="Concluir">✅</button>
+                    <button class="btn-reset" style="color:red" onclick="removerDemanda(${idx})" title="Excluir">🗑️</button>
                 </div>
             </div>`;
         }
@@ -309,7 +367,7 @@ function exportarDemandasRelatorio(lista, f) {
         const t = lista.map(d=>`📌 *${d.titulo}*\n🔹 ${d.subtitulo||''}\n📅 ${d.dataIni||'-'} a ${d.dataFim||'-'}\nStatus: ${d.status}\nEquipe: ${d.responsaveis.map(r=>r.pessoa).join(', ')}`).join("\n\n");
         window.open(`https://wa.me/?text=${encodeURIComponent(t)}`);
     } else {
-        const h = `<html><body style="font-family:Arial; padding:40px">${CABECALHO_SEM_IMAGEM("DEMANDAS")}${lista.map(d=>`<div style="border:1px solid #ccc; padding:15px; margin-bottom:10px; border-left:5px solid black"><h3>${d.titulo}</h3><p>${d.subtitulo}</p><p><b>Data:</b> ${d.dataIni} a ${d.dataFim} | <b>Status:</b> ${d.status}</p><p><b>Equipe:</b> ${d.responsaveis.map(r=>r.pessoa).join(', ')}</p><hr><div>${d.notas}</div></div>`).join("")}</body></html>`;
+        const h = `<html><body style="font-family:Arial; padding:40px">${CABECALHO_SEM_IMAGEM("RELATÓRIO DEMANDAS")}${lista.map(d=>`<div style="border:1px solid #ccc; padding:15px; margin-bottom:10px; border-left:5px solid black"><h3>${d.titulo}</h3><p>${d.subtitulo}</p><p><b>Data:</b> ${d.dataIni} a ${d.dataFim} | <b>Status:</b> ${d.status}</p><p><b>Equipe:</b> ${d.responsaveis.map(r=>r.pessoa).join(', ')}</p><hr><div>${d.notas}</div></div>`).join("")}</body></html>`;
         if(f==='print') { let w=window.open(""); w.document.write(h); w.document.close(); setTimeout(()=>w.print(),500); }
         else { const b=new Blob(['\ufeff',h],{type:'application/msword'}); const l=document.createElement('a'); l.href=URL.createObjectURL(b); l.download="Demandas.doc"; l.click(); }
     }
@@ -318,7 +376,7 @@ function exportarDemandasRelatorio(lista, f) {
 function abrirDemandasConcluidas() { renderDemandasConcluidas(); document.getElementById("modalDemandasConcluidas").style.display="block"; }
 function fecharDemandasConcluidas() { document.getElementById("modalDemandasConcluidas").style.display="none"; }
 function renderDemandasConcluidas() {
-    document.getElementById("listaDemandasConcluidas").innerHTML = demandas.filter(d=>d.concluida).map(d=>`<div class="demand-card"><b>${d.titulo}</b> <button onclick="reabrirDemanda('${d.id}')">Reabrir</button> <button onclick="excluirDemandaConcluida('${d.id}')" style="color:red">Excluir</button></div>`).join("");
+    document.getElementById("listaDemandasConcluidas").innerHTML = demandas.filter(d=>d.concluida).map(d=>`<div class="demand-card"><b>${d.titulo}</b> <button onclick="reabrirDemanda('${d.id}')" title="Restaurar demanda">Reabrir</button> <button onclick="excluirDemandaConcluida('${d.id}')" style="color:red" title="Apagar para sempre">Excluir</button></div>`).join("");
 }
 function reabrirDemanda(id){ const d=demandas.find(x=>x.id===id); d.concluida=false; d.editando=true; fecharDemandasConcluidas(); renderDemandas(); salvarTudo(); }
 function excluirDemandaConcluida(id){ if(confirm("Excluir?")){ const i=demandas.findIndex(x=>x.id===id); demandas.splice(i,1); renderDemandasConcluidas(); salvarTudo(); }}
@@ -340,20 +398,20 @@ function renderReunioes() {
         if(r.editando) {
             return `
             <div class="demand-card">
-                <div style="display:flex; justify-content:flex-end"><button class="btn-reset" onclick="alternarReuniao(${i})">➖</button></div>
-                <input placeholder="Título Reunião" value="${r.titulo}" onchange="reunioes[${i}].titulo=this.value" style="font-size:1.1rem; width:100%; margin-bottom:5px">
-                <input placeholder="Subtítulo" value="${r.subtitulo}" onchange="reunioes[${i}].subtitulo=this.value" style="width:100%; margin-bottom:5px">
+                <div style="display:flex; justify-content:flex-end"><button class="btn-reset" onclick="alternarReuniao(${i})" title="Minimizar">➖</button></div>
+                <input placeholder="Título Reunião" value="${r.titulo}" onchange="reunioes[${i}].titulo=this.value" style="font-size:1.1rem; width:100%; margin-bottom:5px" title="Título">
+                <input placeholder="Subtítulo" value="${r.subtitulo}" onchange="reunioes[${i}].subtitulo=this.value" style="width:100%; margin-bottom:5px" title="Subtítulo">
                 <div style="display:flex; gap:10px; margin-bottom:10px">
-                    <input type="date" value="${r.data}" onchange="reunioes[${i}].data=this.value">
-                    <input placeholder="Convocador" value="${r.convocador}" onchange="reunioes[${i}].convocador=this.value" style="flex:1">
+                    <input type="date" value="${r.data}" onchange="reunioes[${i}].data=this.value" title="Data">
+                    <input placeholder="Convocador" value="${r.convocador}" onchange="reunioes[${i}].convocador=this.value" style="flex:1" title="Quem convocou">
                 </div>
                 <hr>
                 <b>Participantes:</b>
                 <div style="display:flex; gap:5px; margin:5px 0">
-                    <button class="btn-reset" onclick="setModoPart(${i},'manual')">Selecionar</button>
-                    <button class="btn-reset" onclick="setModoPart(${i},'equipe')">Toda Equipe</button>
-                    <button class="btn-reset" onclick="setModoPart(${i},'presentes')">Presentes</button>
-                    <button class="btn-reset" onclick="addConvidado(${i})">+ Convidado</button>
+                    <button class="btn-reset" onclick="setModoPart(${i},'manual')" title="Escolher um por um">Selecionar</button>
+                    <button class="btn-reset" onclick="setModoPart(${i},'equipe')" title="Todos os membros">Toda Equipe</button>
+                    <button class="btn-reset" onclick="setModoPart(${i},'presentes')" title="Apenas presentes">Presentes</button>
+                    <button class="btn-reset" onclick="addConvidado(${i})" title="Nome externo">+ Convidado</button>
                 </div>
                 <div id="part_reuniao_${i}" class="chip-container">
                     ${renderPartReuniao(i)}
@@ -361,17 +419,17 @@ function renderReunioes() {
                 <div style="margin-top:10px">
                     <b>Unidades:</b>
                     <div class="chip-container">
-                         ${UNIDADES_TRABALHO.map(u => `<div class="presente-toggle ${(r.unidades||[]).includes(u)?'ativo':''}" onclick="toggleUnidadeReuniao(${i},'${u}',this)">${u}</div>`).join("")}
+                         ${UNIDADES_TRABALHO.map(u => `<div class="presente-toggle ${(r.unidades||[]).includes(u)?'ativo':''}" onclick="toggleUnidadeReuniao(${i},'${u}',this)" title="Unidade envolvida">${u}</div>`).join("")}
                     </div>
                 </div>
                 <hr>
-                <b>Pautas:</b> <button onclick="addPauta(${i})">+</button>
+                <b>Pautas:</b> <button onclick="addPauta(${i})" title="Adicionar pauta">+</button>
                 <div id="pautas_${i}">${r.pautas.map((p,pi)=>`<div style="margin-top:5px"><input value="${p.tema}" placeholder="Tema" onchange="reunioes[${i}].pautas[${pi}].tema=this.value" style="width:100%"><textarea placeholder="Comentário" onchange="reunioes[${i}].pautas[${pi}].comentario=this.value" style="width:100%">${p.comentario}</textarea></div>`).join("")}</div>
                 <hr>
-                <textarea rows="4" placeholder="Obs Gerais" onchange="reunioes[${i}].textoLivre=this.value" style="width:100%">${r.textoLivre}</textarea>
+                <textarea rows="4" placeholder="Obs Gerais" onchange="reunioes[${i}].textoLivre=this.value" style="width:100%" title="Texto livre">${r.textoLivre}</textarea>
                 <div style="margin-top:10px; display:flex; gap:10px">
-                    <button class="btn-accent" onclick="salvarReuniao(${i})">Salvar</button>
-                    <button class="btn-reset" style="color:red" onclick="excluirReuniao(${i})">Excluir</button>
+                    <button class="btn-accent" onclick="salvarReuniao(${i})" title="Salvar reunião">Salvar</button>
+                    <button class="btn-reset" style="color:red" onclick="excluirReuniao(${i})" title="Excluir reunião">Excluir</button>
                 </div>
             </div>`;
         } else {
@@ -379,11 +437,11 @@ function renderReunioes() {
             <div class="demand-card" style="display:flex; justify-content:space-between; align-items:center">
                 <div><b>${r.titulo||'Reunião'}</b><br><small>${r.data}</small></div>
                 <div style="display:flex; gap:5px">
-                    <button class="btn-exp" onclick="exportarReuniao(${i},'print')">🖨️</button>
-                    <button class="btn-exp" onclick="exportarReuniao(${i},'word')">📄</button>
-                    <button class="btn-exp" onclick="exportarReuniao(${i},'whats')">📲</button>
-                    <button class="btn-reset" onclick="alternarReuniao(${i})">✏️</button>
-                    <button class="btn-reset" style="color:red" onclick="excluirReuniao(${i})">🗑️</button>
+                    <button class="btn-exp" onclick="exportarReuniao(${i},'print')" title="Imprimir">🖨️</button>
+                    <button class="btn-exp" onclick="exportarReuniao(${i},'word')" title="Word">📄</button>
+                    <button class="btn-exp" onclick="exportarReuniao(${i},'whats')" title="WhatsApp">📲</button>
+                    <button class="btn-reset" onclick="alternarReuniao(${i})" title="Editar">✏️</button>
+                    <button class="btn-reset" style="color:red" onclick="excluirReuniao(${i})" title="Excluir">🗑️</button>
                 </div>
             </div>`;
         }
@@ -445,31 +503,31 @@ function renderProjetos() {
     c.innerHTML = projetos.map((p, i) => `
         <div class="demand-card">
             <div style="display:flex; justify-content:flex-end; gap:5px; margin-bottom:5px">
-                 <button class="btn-exp" onclick="exportarProjeto(${i},'print')">🖨️</button>
-                 <button class="btn-exp" onclick="exportarProjeto(${i},'word')">📄</button>
-                 <button class="btn-exp" onclick="exportarProjeto(${i},'whats')">📲</button>
+                 <button class="btn-exp" onclick="exportarProjeto(${i},'print')" title="Imprimir">🖨️</button>
+                 <button class="btn-exp" onclick="exportarProjeto(${i},'word')" title="Word">📄</button>
+                 <button class="btn-exp" onclick="exportarProjeto(${i},'whats')" title="WhatsApp">📲</button>
             </div>
             <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px">
-                <input placeholder="Título do Projeto" value="${p.titulo}" onchange="projetos[${i}].titulo=this.value; salvarTudo()" style="flex:1; font-weight:bold">
-                <input placeholder="Período" value="${p.periodo}" onchange="projetos[${i}].periodo=this.value; salvarTudo()" style="width:120px">
+                <input placeholder="Título do Projeto" value="${p.titulo}" onchange="projetos[${i}].titulo=this.value; salvarTudo()" style="flex:1; font-weight:bold" title="Título">
+                <input placeholder="Período" value="${p.periodo}" onchange="projetos[${i}].periodo=this.value; salvarTudo()" style="width:120px" title="Período">
             </div>
             <div style="margin-bottom:10px">
                 <small>Interessados:</small>
                 <div class="chip-container">
                     ${["DEPOL","COTEC","IDENTIFICAÇÃO FUNCIONAL","IDENTIFICAÇÃO DE VISITANTES","CREDENCIAMENTO DE VEÍCULOS"].map(dep => `
-                        <div class="presente-toggle ${(p.interessados||[]).includes(dep)?'ativo':''}" onclick="toggleInteressadoProj(${i},'${dep}',this)">${dep}</div>
+                        <div class="presente-toggle ${(p.interessados||[]).includes(dep)?'ativo':''}" onclick="toggleInteressadoProj(${i},'${dep}',this)" title="Departamento interessado">${dep}</div>
                     `).join("")}
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:10px">
-                <div style="flex:1; background:#eee; height:10px; border-radius:5px">
+                <div style="flex:1; background:#eee; height:10px; border-radius:5px" title="Barra de progresso">
                     <div style="width:${p.progresso}%; background:${corProgresso(p.progresso)}; height:100%; border-radius:5px"></div>
                 </div>
-                <input type="number" value="${p.progresso}" onchange="projetos[${i}].progresso=Number(this.value); renderProjetos(); salvarTudo()" style="width:50px">%
+                <input type="number" value="${p.progresso}" onchange="projetos[${i}].progresso=Number(this.value); renderProjetos(); salvarTudo()" style="width:50px" title="Porcentagem">%
             </div>
             <div style="margin-top:10px; display:flex; gap:5px">
-                <button class="btn-reset" onclick="abrirDescricaoProjeto(${i})">📝 Descrição</button>
-                <button class="btn-reset" style="color:red" onclick="excluirProjeto(${i})">🗑️ Excluir</button>
+                <button class="btn-reset" onclick="abrirDescricaoProjeto(${i})" title="Editar detalhes">📝 Descrição</button>
+                <button class="btn-reset" style="color:red" onclick="excluirProjeto(${i})" title="Excluir projeto">🗑️ Excluir</button>
             </div>
         </div>
     `).join("");

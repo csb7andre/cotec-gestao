@@ -10,16 +10,11 @@
 * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
 
 body { 
-    /* O TRUQUE ESTÁ AQUI: */
-    /* Criamos uma camada de cor branca com 85% de opacidade (0.85) por cima da imagem */
     background: 
         linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)),
         url('fundo.jpeg') no-repeat center center fixed; 
-        
     background-size: cover;
-    color: var(--text); 
-    margin: 0; 
-    padding-bottom: 50px; 
+    color: var(--text); margin: 0; padding-bottom: 50px; scroll-behavior: smooth;
 }
 
 /* Navbar */
@@ -30,6 +25,18 @@ body {
 }
 .nav-brand { display: flex; align-items: center; gap: 15px; }
 .brand-logo { width: 45px; height: 45px; border-radius: 5px; }
+.brand-text h1 { margin: 0; font-size: 1.2rem; }
+.brand-text span { font-size: 0.6rem; opacity: 0.8; display: block; }
+
+/* Atalhos no Cabeçalho */
+.nav-shortcuts { display: flex; align-items: center; gap: 15px; }
+.nav-shortcuts a { color: #ccc; text-decoration: none; font-size: 0.8rem; transition: color 0.2s; }
+.nav-shortcuts a:hover { color: white; text-decoration: underline; }
+.shortcut-img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3); }
+
+/* Toggle Principal */
+.toggle-header { cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+.toggle-header:hover { background: #f1f5f9; }
 
 /* Botão Sincronizar Discreto */
 .btn-sm-sync {
@@ -43,18 +50,23 @@ body {
 /* Layout */
 .container { max-width: 1400px; margin: 2rem auto; padding: 0 20px; }
 .dashboard-grid { display: grid; grid-template-columns: 300px 1fr; gap: 2rem; }
-@media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } .nav-shortcuts { display: none; } }
 
 .glass-card {
     background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border);
     border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-/* Listas e Inputs */
+/* Listas e Drag & Drop */
 .input-group { display: flex; gap: 5px; margin-bottom: 1rem; }
 .input-group input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
 .item-list { list-style: none; padding: 0; margin: 0; }
-.item-list li { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border); font-size: 0.9rem; align-items: center; }
+.item-list li { 
+    display: flex; justify-content: space-between; padding: 8px; 
+    border-bottom: 1px solid var(--border); font-size: 0.9rem; align-items: center; 
+    cursor: grab; /* Indica que pode arrastar */
+}
+.item-list li.dragging { opacity: 0.5; background: #e2e8f0; border: 2px dashed #94a3b8; }
 
 /* Chips */
 .chip-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

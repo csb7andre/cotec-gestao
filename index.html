@@ -18,9 +18,16 @@
     <div class="nav-brand">
         <img src="LOGO.jpg" alt="Logo" class="brand-logo" onerror="this.style.display='none'">
         <div class="brand-text">
-            <h1>COTEC</h1>
-            <span>COORDENAÇÃO DE GESTÃO DE TECNOLOGIAS POLICIAIS</span>
+            <h1>GESTÃO COTEC</h1>
+            <span>COORDENAÇÃO DE GESTÃO DE TECNOLOGIAS POLICIAIS E CREDENCIAMENTO</span>
         </div>
+    </div>
+    
+    <div class="nav-shortcuts">
+        <a href="#section-demandas">Demandas</a>
+        <a href="#section-reunioes">Reuniões</a>
+        <a href="#section-projetos">Projetos</a>
+        <img src="1770196336247.png" alt="Icone Atalho" class="shortcut-img">
     </div>
 </nav>
 
@@ -30,56 +37,76 @@
             <section class="glass-card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
                     <h3>Equipe</h3>
-                    <button class="btn-sm-sync" onclick="carregarDadosDoServidor()">🔄</button>
+                    <button class="btn-sm-sync" onclick="carregarDadosDoServidor()" title="Sincronizar dados com a nuvem">🔄</button>
                 </div>
                 <div class="input-group">
                     <input id="novoMembro" placeholder="Nome...">
-                    <button class="btn-accent" onclick="addMembro()">+</button>
+                    <button class="btn-accent" onclick="addMembro()" title="Adicionar novo agente">+</button>
                 </div>
                 <ul id="listaMembros" class="item-list"></ul>
+                <small style="color:#666; font-size:0.7rem; display:block; margin-top:5px">Arraste os nomes para reordenar</small>
             </section>
             <section class="glass-card" style="margin-top:20px">
                 <h3>Tarefas Base</h3>
                 <div class="input-group">
                     <input id="novaTarefa" placeholder="Tarefa...">
-                    <button class="btn-accent" onclick="addTarefa()">+</button>
+                    <button class="btn-accent" onclick="addTarefa()" title="Adicionar nova tarefa">+</button>
                 </div>
                 <ul id="listaTarefas" class="item-list"></ul>
             </section>
         </aside>
 
         <div class="operational-area">
-            <div class="selection-row" style="display:flex; gap:15px; margin-bottom:20px">
-                <section class="glass-card" style="flex:1">
-                    <h3>Presença</h3>
-                    <div id="presentes" class="chip-container"></div>
-                </section>
-                <section class="glass-card" style="flex:1">
-                    <h3>Ativar na Escala</h3>
-                    <div id="tarefasHoje" class="chip-container"></div>
-                </section>
+            <div class="glass-card toggle-header" onclick="toggleMainSection()" title="Clique para expandir/recolher a área de escala">
+                <h2 style="margin:0; font-size:1.1rem">PAINEL DE ESCALA E DISTRIBUIÇÃO</h2>
+                <span id="setaMainSection">▼</span>
             </div>
 
-            <section class="glass-card">
-                <div style="display:flex; justify-content:space-between">
-                    <h3>Distribuição</h3>
-                    <button class="btn-reset" onclick="resetarPainelEscala()">Limpar</button>
+            <div id="mainSectionContent" style="display:none; margin-top:15px">
+                <div class="selection-row" style="display:flex; gap:15px; margin-bottom:20px">
+                    <section class="glass-card" style="flex:1">
+                        <h3>Presença</h3>
+                        <div id="presentes" class="chip-container"></div>
+                    </section>
+                    <section class="glass-card" style="flex:1">
+                        <h3>Ativar na Escala</h3>
+                        <div id="tarefasHoje" class="chip-container"></div>
+                    </section>
                 </div>
-                <div id="painelTarefas" class="painel-tarefas-grid"></div>
-            </section>
 
-            <div style="margin-top:20px; display:flex; gap:10px;">
-                <button class="btn-mega" onclick="gerarEscala('HOJE')">GERAR ESCALA DO DIA</button>
-                <button class="btn-mega btn-secundario" onclick="abrirModalData()">ESCALA OUTRA DATA</button>
+                <section class="glass-card">
+                    <div style="display:flex; justify-content:space-between">
+                        <h3>Distribuição</h3>
+                        <button class="btn-reset" onclick="resetarPainelEscala()" title="Limpar todos os agentes das tarefas">Limpar</button>
+                    </div>
+                    <div id="painelTarefas" class="painel-tarefas-grid"></div>
+                </section>
+
+                <div style="margin-top:20px; display:flex; gap:10px;">
+                    <button class="btn-mega" onclick="gerarEscala('HOJE')" title="Gerar escala com a data de hoje">GERAR ESCALA DO DIA</button>
+                    <button class="btn-mega btn-secundario" onclick="abrirModalData()" title="Escolher data específica ou período">ESCALA OUTRA DATA</button>
+                </div>
             </div>
             
             <section id="resultSection" class="glass-card hidden" style="margin-top:20px">
                 <h3 id="tituloEscalaGerada"></h3>
                 <div id="resultado"></div>
-                <div class="export-controls" style="margin-top:15px">
-                    <button class="btn-exp" onclick="executarExport('print')">Imprimir</button>
-                    <button class="btn-exp" onclick="executarExport('word')">Word</button>
-                    <button class="btn-exp" style="color:#25D366; border-color:#25D366" onclick="executarExport('whats')">WhatsApp</button>
+                
+                <div class="export-controls" style="margin-top:15px; background:#f8fafc; padding:10px; border-radius:8px;">
+                    <label style="font-size:0.8rem; font-weight:bold;">Exportar para:</label>
+                    <div style="display:flex; gap:10px; margin:5px 0 10px 0;">
+                        <select id="exportTarget" onchange="toggleExportSelect()" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
+                            <option value="todos">Toda a Equipe</option>
+                            <option value="individual">Individual</option>
+                        </select>
+                        <select id="exportIndividualSelect" style="display:none; padding:5px; border-radius:4px; border:1px solid #ccc;"></select>
+                    </div>
+
+                    <div style="display:flex; gap:10px">
+                        <button class="btn-exp" onclick="executarExport('print')" title="Imprimir Relatório">🖨️ Imprimir</button>
+                        <button class="btn-exp" onclick="executarExport('word')" title="Baixar documento Word">📄 Word</button>
+                        <button class="btn-exp" style="color:#25D366; border-color:#25D366" onclick="executarExport('whats')" title="Enviar Texto via WhatsApp">📲 WhatsApp</button>
+                    </div>
                 </div>
             </section>
         </div>
@@ -87,55 +114,57 @@
 
     <hr style="margin:40px 0">
 
-    <section class="glass-card">
+    <section id="section-demandas" class="glass-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
-            <div class="header-with-sync" onclick="toggleDemandas()">
+            <div class="header-with-sync" onclick="toggleDemandas()" title="Expandir/Recolher Demandas">
                 <span id="setaDemandas">▼</span>
                 <h2 style="margin:0">
                     <span id="tituloDemandas">Acompanhamento de Demandas</span>
                     <span id="contadorDemandas"></span>
                 </h2>
-                <button class="btn-sm-sync" onclick="event.stopPropagation(); carregarDadosDoServidor()">🔄</button>
+                <button class="btn-sm-sync" onclick="event.stopPropagation(); carregarDadosDoServidor()" title="Sincronizar Demandas">🔄</button>
             </div>
-            <button class="btn-accent" onclick="novaDemanda()">+ Nova Demanda</button>
+            <button class="btn-accent" onclick="novaDemanda()" title="Criar nova demanda">+ Nova Demanda</button>
         </div>
         <div id="listaDemandas"></div>
-        <div style="margin-top:20px; background:#f1f5f9; padding:15px; border-radius:8px; display:flex; justify-content:space-between;">
+        
+        <div id="footerDemandas" style="margin-top:20px; background:#f1f5f9; padding:15px; border-radius:8px; display:flex; justify-content:space-between;">
              <div>
-                <b>Lote:</b>
-                <button class="btn-exp" onclick="exportarDemandasLote('whats')">WhatsApp</button>
-                <button class="btn-exp" onclick="exportarDemandasLote('word')">Word</button>
+                <b>Ações em Lote:</b>
+                <button class="btn-exp" onclick="exportarDemandasLote('print')" title="Imprimir lista de demandas">🖨️</button>
+                <button class="btn-exp" onclick="exportarDemandasLote('whats')" title="Enviar lista por WhatsApp">📲</button>
+                <button class="btn-exp" onclick="exportarDemandasLote('word')" title="Baixar lista em Word">📄</button>
              </div>
-             <button class="btn-reset" onclick="abrirDemandasConcluidas()">VER CONCLUÍDAS</button>
+             <button class="btn-reset" onclick="abrirDemandasConcluidas()" title="Ver histórico de concluídas">VER CONCLUÍDAS</button>
         </div>
     </section>
 
-    <section class="glass-card" style="margin-top:20px">
+    <section id="section-reunioes" class="glass-card" style="margin-top:20px">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
-            <div class="header-with-sync" onclick="toggleReunioes()">
+            <div class="header-with-sync" onclick="toggleReunioes()" title="Expandir/Recolher Reuniões">
                 <span id="setaReunioes">▼</span>
                 <h2 style="margin:0">REUNIÕES <span id="contadorReunioes"></span></h2>
-                <button class="btn-sm-sync" onclick="event.stopPropagation(); carregarDadosDoServidor()">🔄</button>
+                <button class="btn-sm-sync" onclick="event.stopPropagation(); carregarDadosDoServidor()" title="Sincronizar Reuniões">🔄</button>
             </div>
-            <button class="btn-accent" onclick="novaReuniao()">+ Nova Reunião</button>
+            <button class="btn-accent" onclick="novaReuniao()" title="Agendar nova reunião">+ Nova Reunião</button>
         </div>
         <div id="listaReunioes"></div>
     </section>
 
-    <section class="glass-card" style="margin-top:20px">
+    <section id="section-projetos" class="glass-card" style="margin-top:20px">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
-            <div class="header-with-sync" onclick="toggleProjetos()">
+            <div class="header-with-sync" onclick="toggleProjetos()" title="Expandir/Recolher Projetos">
                 <span id="setaProjetos">▼</span>
                 <h2 style="margin:0">PROJETOS <span id="contadorProjetos"></span></h2>
-                <button class="btn-sm-sync" onclick="event.stopPropagation(); carregarDadosDoServidor()">🔄</button>
+                <button class="btn-sm-sync" onclick="event.stopPropagation(); carregarDadosDoServidor()" title="Sincronizar Projetos">🔄</button>
             </div>
-            <button class="btn-accent" onclick="novoProjeto()">+ Novo Projeto</button>
+            <button class="btn-accent" onclick="novoProjeto()" title="Criar novo projeto">+ Novo Projeto</button>
         </div>
         <div id="listaProjetos"></div>
     </section>
 </main>
 
-<div id="modalSorteio" class="modal"><div class="modal-content"><h3>Sortear</h3><div id="elegiveisContainer" class="chip-container"></div><input type="number" id="qtdTotal" value="1" style="margin-top:10px"><div style="margin-top:10px"><button onclick="confirmarSorteio()">Sortear</button> <button onclick="fecharModal()">Fechar</button></div></div></div>
+<div id="modalSorteio" class="modal"><div class="modal-content"><h3>Sortear</h3><div id="elegiveisContainer" class="chip-container"></div><input type="number" id="qtdTotal" value="1" style="margin-top:10px" title="Quantidade de agentes"><div style="margin-top:10px"><button onclick="confirmarSorteio()">Sortear</button> <button onclick="fecharModal()">Fechar</button></div></div></div>
 <div id="modalSorteioDemanda" class="modal"><div class="modal-content"><h3>Sortear Demanda</h3><div id="elegiveisDemandaContainer" class="chip-container"></div><input type="number" id="qtdTotalDem" placeholder="Qtd"><div style="margin-top:10px"><button onclick="confirmarSorteioDemanda()">Sortear</button> <button onclick="fecharModalDemanda()">Fechar</button></div></div></div>
 <div id="modalDemandasConcluidas" class="modal"><div class="modal-content" style="max-width:800px"><h3>Concluídas</h3><div id="listaDemandasConcluidas" style="max-height:400px;overflow-y:auto"></div><button style="width:100%;margin-top:10px" onclick="fecharDemandasConcluidas()">Fechar</button></div></div>
 <div id="modalProjeto" class="modal"><div class="modal-content" style="max-width:700px"><h3>Descrição</h3><div id="editorProjeto" style="height:250px;background:white"></div><button style="width:100%;margin-top:10px" onclick="gravarDescricaoProjeto()">Gravar</button> <button onclick="fecharModalProjeto()" style="margin-top:5px;width:100%;background:#eee">Cancelar</button></div></div>
