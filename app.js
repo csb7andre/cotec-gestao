@@ -60,12 +60,14 @@ async function carregarDadosDoServidor() {
         const r = await fetch(API_URL);
         const d = await r.json();
 
-        if (d) {
-            // AQUI ESTÁ A VACINA: O .filter remove itens vazios ou só com espaços
-            membros = (d.membros || membros).filter(x => x && x.trim() !== "");
-            tarefas = (d.tarefas || tarefas).filter(x => x && x.trim() !== "");
+       if (d) {
+            // 1. LIMPEZA TOTAL (Vacina)
+            // [...new Set(...)] -> Remove nomes repetidos
+            // .filter(...) -> Remove nomes vazios
+            membros = [...new Set((d.membros || membros).filter(x => x && x.trim() !== ""))];
+            tarefas = [...new Set((d.tarefas || tarefas).filter(x => x && x.trim() !== ""))];
             
-            // Para objetos complexos, garantimos que não sejam nulos
+            // 2. OBJETOS (Garante que tenham ID)
             demandas = (d.demandas || demandas).filter(x => x && x.id);
             reunioes = (d.reunioes || reunioes).filter(x => x && x.id);
             projetos = (d.projetos || projetos).filter(x => x && x.id);
@@ -73,7 +75,12 @@ async function carregarDadosDoServidor() {
             config = d.config || config;
             historico = d.escalas || historico;
 
-            console.log("Dados limpos e sincronizados.");
+            console.log("Dados limpos (sem vazios/repetidos) e sincronizados.");
+            
+            // Atualiza o LocalStorage para garantir que o PC fique limpo também
+            localStorage.setItem("membros", JSON.stringify(membros));
+            localStorage.setItem("tarefas", JSON.stringify(tarefas));
+            
             init();
         }
     } catch (e) {
@@ -102,8 +109,41 @@ const CABECALHO_SEM_IMAGEM = (periodo) => `
 `;
 
 // --- LISTAS ---
-function addMembro() { const v=document.getElementById("novoMembro").value; if(v){membros.push(v); document.getElementById("novoMembro").value=""; renderListas(); salvarTudo();}}
-function addTarefa() { const v=document.getElementById("novaTarefa").value; if(v){tarefas.push(v); document.getElementById("novaTarefa").value=""; init(); salvarTudo();}}
+function addMembro() {
+    // .trim() remove espaços antes e depois. " André " vira "André"
+    const v = document.getElementById("novoMembro").value.trim();
+    
+    if (!v) return; // Se vazio, tchau.
+    
+    // O PORTEIRO: Se a lista já inclui esse nome, avisa e para tudo.
+    if (membros.includes(v)) {
+        alert("Este membro já existe na lista!");
+        document.getElementById("novoMembro").value = ""; // Limpa o campo para não confundir
+        return; 
+    }
+
+    membros.push(v);
+    document.getElementById("novoMembro").value = "";
+    renderListas();
+    salvarTudo();
+}
+
+function addTarefa() {
+    const v = document.getElementById("novaTarefa").value.trim();
+    
+    if (!v) return;
+    
+    if (tarefas.includes(v)) {
+        alert("Esta tarefa já existe!");
+        document.getElementById("novaTarefa").value = "";
+        return;
+    }
+
+    tarefas.push(v);
+    document.getElementById("novaTarefa").value = "";
+    init();
+    salvarTudo();
+}
 function removerMembro(i) { membros.splice(i,1); renderListas(); salvarTudo(); }
 function removerTarefa(i) { tarefas.splice(i,1); renderListas(); salvarTudo(); }
 
