@@ -10,9 +10,16 @@
 * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
 
 body { 
-    background: url('fundo.jpeg') no-repeat center center fixed; 
+    /* O TRUQUE ESTÁ AQUI: */
+    /* Criamos uma camada de cor branca com 85% de opacidade (0.85) por cima da imagem */
+    background: 
+        linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.85)),
+        url('fundo.jpeg') no-repeat center center fixed; 
+        
     background-size: cover;
-    color: var(--text); margin: 0; padding-bottom: 50px; 
+    color: var(--text); 
+    margin: 0; 
+    padding-bottom: 50px; 
 }
 
 /* Navbar */
