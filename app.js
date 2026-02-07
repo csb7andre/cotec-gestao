@@ -53,28 +53,35 @@ function salvarTudo() {
 }
 
 async function carregarDadosDoServidor() {
-    // Feedback visual nos botões de sync
+    // Feedback visual nos botões
     document.querySelectorAll('.btn-sm-sync').forEach(b => b.innerText = "⏳");
-    
+
     try {
         const r = await fetch(API_URL);
         const d = await r.json();
+
         if (d) {
-            membros = d.membros || membros;
-            tarefas = d.tarefas || tarefas;
-            demandas = d.demandas || demandas;
-            reunioes = d.reunioes || reunioes;
-            projetos = d.projetos || projetos;
+            // AQUI ESTÁ A VACINA: O .filter remove itens vazios ou só com espaços
+            membros = (d.membros || membros).filter(x => x && x.trim() !== "");
+            tarefas = (d.tarefas || tarefas).filter(x => x && x.trim() !== "");
+            
+            // Para objetos complexos, garantimos que não sejam nulos
+            demandas = (d.demandas || demandas).filter(x => x && x.id);
+            reunioes = (d.reunioes || reunioes).filter(x => x && x.id);
+            projetos = (d.projetos || projetos).filter(x => x && x.id);
+            
             config = d.config || config;
             historico = d.escalas || historico;
+
+            console.log("Dados limpos e sincronizados.");
             init();
         }
-    } catch (e) { console.warn("Erro sync", e); }
-    finally {
+    } catch (e) {
+        console.warn("Erro sync", e);
+    } finally {
         document.querySelectorAll('.btn-sm-sync').forEach(b => b.innerText = "🔄");
     }
 }
-
 // --- INIT ---
 function init() {
     tarefas.forEach(t => { if (!config[t]) config[t] = { responsaveis: [] }; });
