@@ -24,6 +24,10 @@ let projetosMinimizados = false;
 let mainSectionMinimized = true; 
 let draggedItemIndex = null;
 
+// --- TRAVA DE SEGURANÇA (NOVO) ---
+// Impede que a nuvem desfaça sua organização enquanto está salvando
+let tempoBloqueioSync = null; 
+
 // --- SINCRONIZAÇÃO ---
 async function salvarNoServidor(tipo, dados) {
     try {
@@ -35,6 +39,9 @@ async function salvarNoServidor(tipo, dados) {
 }
 
 function salvarTudo() {
+    // Ativa a trava por 5 segundos sempre que você salvar algo importante
+    bloquearSyncTemporario();
+
     localStorage.setItem("membros", JSON.stringify(membros));
     localStorage.setItem("tarefas", JSON.stringify(tarefas));
     localStorage.setItem("config", JSON.stringify(config));
@@ -52,12 +59,27 @@ function salvarTudo() {
     salvarNoServidor("historico", historico);
 }
 
+// Função para bloquear download da nuvem por 5 segundos
+function bloquearSyncTemporario() {
+    if(tempoBloqueioSync) clearTimeout(tempoBloqueioSync);
+    tempoBloqueioSync = setTimeout(() => {
+        tempoBloqueioSync = null;
+    }, 5000); // 5 segundos de "silêncio" da nuvem
+}
+
 async function carregarDadosDoServidor() {
+    // SE TIVER BLOQUEADO, NÃO CARREGA (Respeita sua edição local)
+    if (tempoBloqueioSync !== null) {
+        console.log("Sync ignorado: Edição recente do usuário prevalece.");
+        return; 
+    }
+
     document.querySelectorAll('.btn-sm-sync').forEach(b => b.innerText = "⏳");
     try {
         const r = await fetch(API_URL);
         const d = await r.json();
         if (d) {
+            // Vacina duplicatas/vazios
             membros = [...new Set((d.membros || membros).filter(x => x && x.trim() !== ""))];
             tarefas = [...new Set((d.tarefas || tarefas).filter(x => x && x.trim() !== ""))];
             demandas = (d.demandas || demandas).filter(x => x && x.id);
@@ -85,11 +107,11 @@ function init() {
     const mainContent = document.getElementById("mainSectionContent");
     const setaMain = document.getElementById("setaMainSection");
     if(mainSectionMinimized) {
-        mainContent.style.display = "none";
-        setaMain.innerText = "▼";
+        if(mainContent) mainContent.style.display = "none";
+        if(setaMain) setaMain.innerText = "▼";
     } else {
-        mainContent.style.display = "block";
-        setaMain.innerText = "▲";
+        if(mainContent) mainContent.style.display = "block";
+        if(setaMain) setaMain.innerText = "▲";
     }
 }
 
@@ -116,7 +138,7 @@ function toggleMainSection() {
     }
 }
 
-// --- LISTAS E DRAG & DROP ---
+// --- LISTAS E DRAG & DROP (ORGANIZAÇÃO) ---
 function addMembro() { 
     const v=document.getElementById("novoMembro").value.trim(); 
     if(!v)return; if(membros.includes(v))return alert("Já existe!");
@@ -137,16 +159,29 @@ function renderListas() {
         const li = document.createElement("li");
         li.draggable = true;
         li.innerHTML = `<span>${m}</span> <button onclick="removerMembro(${i})" title="Excluir membro">x</button>`;
-        li.ondragstart = (e) => { draggedItemIndex = i; li.classList.add("dragging"); };
-        li.ondragend = (e) => { li.classList.remove("dragging"); draggedItemIndex = null; };
+        
+        // EVENTOS DE ARRASTAR
+        li.ondragstart = (e) => { 
+            draggedItemIndex = i; 
+            li.classList.add("dragging"); 
+            // Bloqueia sync enquanto arrasta
+            bloquearSyncTemporario();
+        };
+        li.ondragend = (e) => { 
+            li.classList.remove("dragging"); 
+            draggedItemIndex = null; 
+        };
         li.ondragover = (e) => { e.preventDefault(); };
         li.ondrop = (e) => {
             e.preventDefault();
             if (draggedItemIndex === null || draggedItemIndex === i) return;
+            
+            // Troca de posição
             const itemMovido = membros.splice(draggedItemIndex, 1)[0];
             membros.splice(i, 0, itemMovido);
+            
             renderListas();
-            salvarTudo(); 
+            salvarTudo(); // SALVA A NOVA ORDEM E BLOQUEIA SYNC
         };
         listaMembros.appendChild(li);
     });
@@ -218,18 +253,20 @@ function gerarEscala(periodo) {
     salvarTudo();
 }
 
-// --- EXPORTAÇÃO AVANÇADA ---
+// --- EXPORTAÇÃO ---
 function renderOpcoesExportacao() {
     const sel = document.getElementById("exportIndividualSelect");
-    sel.innerHTML = "";
-    const nomes = Object.keys(historico[0].distribuicao);
-    nomes.forEach(n => {
-        const op = document.createElement("option");
-        op.value = n;
-        op.innerText = n;
-        sel.appendChild(op);
-    });
-    toggleExportSelect();
+    if(sel) {
+        sel.innerHTML = "";
+        const nomes = Object.keys(historico[0].distribuicao);
+        nomes.forEach(n => {
+            const op = document.createElement("option");
+            op.value = n;
+            op.innerText = n;
+            sel.appendChild(op);
+        });
+        toggleExportSelect();
+    }
 }
 
 function toggleExportSelect() {
